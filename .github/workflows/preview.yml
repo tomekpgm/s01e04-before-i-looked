@@ -1,0 +1,84 @@
+# Plan morning-digest § 3 (issue #7): save /digest/2026-10-28 as one HTML file and put it on
+# GitHub Pages for the reviewer. Manual runs only. The HTML is built inside the job and never
+# committed (ADR 0003). The banner marker comes from the repo variable LANE_MARKER; with the
+# variable deleted, the same run uploads the page with "no marker set" over the same link (§ 4).
+name: preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  NIGHT: 2026-10-28
+  PORT: 8787
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install
+        run: |
+          corepack enable pnpm
+          corepack prepare pnpm@12.18.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck and test
+        run: |
+          pnpm typecheck
+          pnpm test
+
+      - name: Write .env
+        env:
+          LANE_MARKER: ${{ vars.LANE_MARKER }}
+        run: printf 'LANE_ID=lane-07\nLANE_MARKER=%s\nPORT=%s\n' "$LANE_MARKER" "$PORT" > .env
+
+      - name: Save the page
+        run: |
+          pnpm start > rig.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS "http://localhost:$PORT/health" > /dev/null && break
+            sleep 1
+          done
+          mkdir -p _site
+          curl -fsS "http://localhost:$PORT/digest/$NIGHT" -o _site/index.html
+          kill %1 || true
+
+      - name: Check the page
+        run: |
+          f=_site/index.html
+          test -s "$f" || { echo "empty page"; exit 1; }
+          grep -q '<table class="digest">' "$f" || { echo "no digest table"; exit 1; }
+          grep -q 'class="marker"' "$f" || { echo "no lane banner"; exit 1; }
+          if grep -qi '<script' "$f"; then echo "page has a script"; exit 1; fi
+          if grep -Eqi '(src|href)="(https?:)?//' "$f"; then echo "page loads something external"; exit 1; fi
+          # Say whether a marker is set, never print it: Actions logs of a public repo are public
+          # and outlive the clean-up in § 4.
+          if grep -q '<span class="marker">no marker set</span>' "$f"; then echo "banner: no marker set"; else echo "banner: marker set"; fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
