@@ -1,8 +1,9 @@
 ---
 plan: morning-digest
-status: ready
+status: done
 owner: rook
 opened: 2026-10-29
+closed: 2026-11-06
 ---
 
 # Morning digest
@@ -77,3 +78,20 @@ page again with `LANE_MARKER` unset (the banner reads "no marker set") and uploa
 link. Move this plan to `docs/plans/done/` with its issue list.
 
 Done when: the preview link no longer shows the lane marker.
+
+## Issues
+
+| # | Issue | Blocked by | Worker | Closed |
+|---|-------|-----------|--------|--------|
+| 1 | Digest types: DigestRow, Night and the readNight signature | — | claude-code · opus-5.5 · low | 2026-11-06 |
+| 2 | Run log reader: readNight | #1 | claude-code · opus-5.5 · low | 2026-11-06 |
+| 3 | Digest page: GET /digest/:night | #1, #2 | claude-code · sonnet-5.5 · low | 2026-11-06 |
+| 4 | Digest JSON: GET /api/digest/:night | #1, #2 | claude-code · sonnet-5.5 · low | 2026-11-06 |
+| 5 | Board link: each night to its digest, with counts | #1, #2, #3 | claude-code · sonnet-5.5 · low | 2026-11-06 |
+| 6 | Route tests for the digest page and JSON | #1, #3, #4 | claude-code · haiku-5.5 · default | 2026-11-06 |
+| 7 | Preview for review on GitHub Pages | #3 | claude-code · opus-5.5 · low | 2026-11-06 |
+| 8 | Clean up: preview without marker, plan to done | #7 | claude-code · opus-5.5 · low | 2026-11-06 |
+
+#7 was closed once before the reviewer had looked, reopened, and closed again after the review.
+The first preview run's log (run 42299759459) shows the marker in the step's env header; the
+clean-up run (42302292726) does not.
